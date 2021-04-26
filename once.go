@@ -1,30 +1,9 @@
 package once
 
-import (
-	"runtime"
-	"sync/atomic"
-)
+// #include "spin.h"
+import "C"
 
-// Locker is a spinlock implementation.
-//
-// A Locker must not be copied after first use.
-type Locker struct {
-	lock uintptr
-}
-
-// Lock locks l.
-// If the lock is already in use, the calling goroutine
-// blocks until the locker is available.
-func (l *Locker) Lock() {
-	for !atomic.CompareAndSwapUintptr(&l.lock, 0, 1) {
-		runtime.Gosched()
-	}
-}
-
-// Unlock unlocks l.
-func (l *Locker) Unlock() {
-	atomic.StoreUintptr(&l.lock, 0)
-}
+import "sync/atomic"
 
 // Once is an object that will perform exactly one action.
 type Once struct {
@@ -34,7 +13,7 @@ type Once struct {
 	// Placing done first allows more compact instructions on some architectures (amd64/x86),
 	// and fewer instructions (to calculate offset) on other architectures.
 	done uint32
-	m    Locker
+	m    C.spinlock
 }
 
 // Do calls the function f if and only if Do is being called for the
@@ -63,8 +42,10 @@ func (o *Once) Do(f func()) {
 }
 
 func (o *Once) doSlow(f func()) {
-	o.m.Lock()
-	defer o.m.Unlock()
+	if !C.try_lock(&o.m) {
+		return
+	}
+	defer C.unlock(&o.m)
 	if o.done == 0 {
 		defer atomic.StoreUint32(&o.done, 1)
 		f()
