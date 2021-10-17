@@ -1,6 +1,8 @@
-# Benchmark
+# Synx
 
-## Spinloc
+Synx is enhanced version of standard `sync` package.
+
+## Spinlock
 
 TODO
 
