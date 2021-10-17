@@ -56,6 +56,19 @@ func (m *Map) Reset() {
 func (m *Map) Get(key string) (val interface{}, err error) {
 	size := int64(len(m.Items))
 	indexes := hashChain(size, key)
+	for _, index := range indexes {
+		if m.probeGet(key, index) {
+			return m.Items[index].Val, nil
+		}
+	}
+
+	_, val, err = m.linearProbingGet(key, indexes[0])
+	return val, err
+}
+
+func (m *Map) SyncGet(key string) (val interface{}, err error) {
+	size := int64(len(m.Items))
+	indexes := hashChain(size, key)
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	for _, index := range indexes {
@@ -71,6 +84,18 @@ func (m *Map) Get(key string) (val interface{}, err error) {
 func (m *Map) Set(key string, val interface{}) error {
 	size := int64(len(m.Items))
 	indexes := hashChain(size, key)
+	for _, index := range indexes {
+		if m.probeEmplace(key, val, index) {
+			return nil
+		}
+	}
+
+	return m.linearProbeEmplace(key, val, indexes[0])
+}
+
+func (m *Map) SyncSet(key string, val interface{}) error {
+	size := int64(len(m.Items))
+	indexes := hashChain(size, key)
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	for _, index := range indexes {
@@ -83,6 +108,23 @@ func (m *Map) Set(key string, val interface{}) error {
 }
 
 func (m *Map) Del(key string) {
+	size := int64(len(m.Items))
+	indexes := hashChain(size, key)
+	for _, index := range indexes {
+		if m.probeDel(key, index) {
+			m.Count--
+			return
+		}
+	}
+
+	idx, _, err := m.linearProbingGet(key, indexes[0])
+	if !errors.Is(err, ErrNotFound) {
+		m.Count--
+		m.Items[idx].Key = "" // mark as deleted.
+	}
+}
+
+func (m *Map) SyncDel(key string) {
 	size := int64(len(m.Items))
 	indexes := hashChain(size, key)
 	m.lock.Lock()
