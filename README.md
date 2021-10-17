@@ -1,4 +1,4 @@
-# Synx
+# Synx [![Go Reference](https://pkg.go.dev/badge/github.com/moeryomenko/synx.svg)](https://pkg.go.dev/github.com/moeryomenko/synx)
 
 Synx is enhanced version of standard `sync` package.
 
