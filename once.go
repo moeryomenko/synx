@@ -1,7 +1,4 @@
-package once
-
-// #include "spin.h"
-import "C"
+package synx
 
 import "sync/atomic"
 
@@ -13,7 +10,7 @@ type Once struct {
 	// Placing done first allows more compact instructions on some architectures (amd64/x86),
 	// and fewer instructions (to calculate offset) on other architectures.
 	done uint32
-	m    C.spinlock
+	m    Spinlock
 }
 
 // Do calls the function f if and only if Do is being called for the
@@ -42,10 +39,10 @@ func (o *Once) Do(f func()) {
 }
 
 func (o *Once) doSlow(f func()) {
-	if !C.try_lock(&o.m) {
+	if !o.m.TryLock() {
 		return
 	}
-	defer C.unlock(&o.m)
+	defer o.m.Unlock()
 	if o.done == 0 {
 		defer atomic.StoreUint32(&o.done, 1)
 		f()

@@ -1,17 +1,21 @@
 # Benchmark
 
-This implementation based on spinlock from `https://github.com/moeryomenko/sync`
+## Spinloc
+
+TODO
+
+## Once
 
 ```sh
 $ go version
-go version go1.16.3 linux/amd64
-$ go test -race=1 -bench=.
+go version go1.17.1 linux/amd64
+$ go test -race -bench=. ./...
 goos: linux
 goarch: amd64
-pkg: github.com/moeryomenko/once
+pkg: github.com/moeryomenko/synx
 cpu: AMD Ryzen 5 3500U with Radeon Vega Mobile Gfx
-BenchmarkOnce-8         	15947769	        77.77 ns/op
-BenchmarkCustomOnce-8   	17909221	        66.80 ns/op
+BenchmarkOnce-8         	19812547	       61.74 ns/op
+BenchmarkCustomOnce-8   	23804229	       50.94 ns/op
 PASS
-ok  	github.com/moeryomenko/once	2.621s
+ok  	github.com/moeryomenko/synx	2.571s
 ```

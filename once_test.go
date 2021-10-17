@@ -1,4 +1,4 @@
-package once
+package synx
 
 import (
 	"sync"

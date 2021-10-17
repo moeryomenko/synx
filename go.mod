@@ -1,3 +1,3 @@
-module github.com/moeryomenko/once
+module github.com/moeryomenko/synx
 
-go 1.12
+go 1.17
