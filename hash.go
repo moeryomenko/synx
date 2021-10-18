@@ -1,6 +1,6 @@
 package synx
 
-import "github.com/cespare/xxhash/v2"
+import "unsafe"
 
 // MultiProbingHash returns a number of hashes from a given key.
 // It must return at least one hash.
@@ -10,15 +10,13 @@ import "github.com/cespare/xxhash/v2"
 // Ben Appleton, Michael O’Reilly, 2015, Multi-probe consistent hashing, Google
 // http://arxiv.org/pdf/1505.00062.pdf
 //
-func MultiProbingHash(key string) []uint64 {
-	h := xxhash.New().Sum([]byte(key))
-	e := func(h []byte) uint32 {
-		return ((uint32(h[3]) << 24) |
-			(uint32(h[2]) << 16) |
-			(uint32(h[1]) << 8) |
-			(uint32(h[0])))
-	}
-	return []uint64{uint64(e(h[0:4])), uint64(e(h[4:8])), uint64(e(h[8:12])), uint64(e(h[12:16]))}
+func MultiProbingHash(key string) [4]uint64 {
+	p := *((*int64)(unsafe.Pointer(&key)))
+	return [4]uint64{
+		uint64(0xff & p),
+		uint64(0xff & (p >> 8)),
+		uint64(0xff & (p >> 16)),
+		uint64(0xff & (p >> 24))}
 }
 
 // JumpConsistentHash returns index of map entry.

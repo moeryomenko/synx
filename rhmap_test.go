@@ -1,8 +1,6 @@
 package synx
 
-import (
-	"testing"
-)
+import "testing"
 
 func TestMap(t *testing.T) {
 	r := New(100)

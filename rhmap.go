@@ -226,6 +226,7 @@ func (m *Map) linearProbeEmplace(key string, val interface{}, idx int64) error {
 		}
 
 		if idx == idxStart {
+			// TODO: implement resize.
 			return ErrMapFull
 		}
 	}
