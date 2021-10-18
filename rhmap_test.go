@@ -3,7 +3,7 @@ package synx
 import "testing"
 
 func TestMap(t *testing.T) {
-	r := New(100)
+	r := New(10)
 	ops := 0
 
 	g := map[string]string{}

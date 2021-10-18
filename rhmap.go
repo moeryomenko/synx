@@ -28,6 +28,10 @@ type Map struct {
 	// Number of keys in the Map.
 	Count int
 
+	// When any item's distance gets too large, grow the Map.
+	// Defaults to 10.
+	MaxDistance int
+
 	lock Spinlock
 }
 
@@ -225,9 +229,10 @@ func (m *Map) linearProbeEmplace(key string, val interface{}, idx int64) error {
 			idx = 0
 		}
 
-		if idx == idxStart {
-			// TODO: implement resize.
-			return ErrMapFull
+		if incoming.Distance > m.MaxDistance || idx == idxStart {
+			m.Grow(m.Count * 2)
+
+			return m.Set(incoming.Key, incoming.Val)
 		}
 	}
 }
@@ -239,4 +244,31 @@ func (m *Map) probeDel(key string, hint int64) bool {
 		return true
 	}
 	return false
+}
+
+// CopyTo copies key/val's to the dest Map.
+func (m *Map) CopyTo(dest *Map) {
+	m.Visit(func(k string, v interface{}) bool { dest.Set(k, v); return true })
+}
+
+// Visit invokes the callback on key/val. The callback can return
+// false to exit the visitation early.
+func (m *Map) Visit(callback func(k string, v interface{}) (keepGoing bool)) {
+	for i := range m.Items {
+		e := &m.Items[i]
+		if e.Key != "" {
+			if !callback(e.Key, e.Val) {
+				return
+			}
+		}
+	}
+}
+
+// Grow resizes Map size.
+func (m *Map) Grow(newSize int) {
+	grow := New(newSize)
+	m.CopyTo(grow)
+	m.Reset()
+	m.Items = grow.Items
+	m.Count = grow.Count
 }
