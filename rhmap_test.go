@@ -23,7 +23,7 @@ func TestMap(t *testing.T) {
 			t.Fatalf("ops: %d, get different values for key %s, expected: %s, but given %s",
 				ops, k, gv, rv)
 		}
-		if r.Count != len(g) {
+		if r.count != len(g) {
 			t.Fatalf("ops: %d, get different counts", ops)
 		}
 	}
@@ -37,7 +37,7 @@ func TestMap(t *testing.T) {
 		if err != nil {
 			t.Fatalf("ops: %d, set err", ops)
 		}
-		if r.Count != len(g) {
+		if r.count != len(g) {
 			t.Fatalf("ops: %d, set different counts", ops)
 		}
 	}
@@ -48,7 +48,7 @@ func TestMap(t *testing.T) {
 		r.Del(k)
 		delete(g, k)
 
-		if r.Count != len(g) {
+		if r.count != len(g) {
 			t.Fatalf("ops: %d, del different counts", ops)
 		}
 	}

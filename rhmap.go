@@ -7,6 +7,8 @@ var (
 	ErrNotFound = errors.New("key not found")
 )
 
+const defaultCapacity = 10
+
 // Map is a hashmap that uses the robinhood algorithm.
 //
 // A general purpose hash table, using the Robin Hood hashing algorithm.
@@ -22,15 +24,15 @@ var (
 // https://cs.uwaterloo.ca/research/tr/1986/CS-86-14.pdf
 //
 type Map struct {
-	// Items are the slots of the hashmap for items.
-	Items []Item
+	// items are the slots of the hashmap for items.
+	items []Item
 
 	// Number of keys in the Map.
-	Count int
+	count int
 
 	// When any item's distance gets too large, grow the Map.
 	// Defaults to 10.
-	MaxDistance int
+	maxDistance int
 
 	lock Spinlock
 }
@@ -44,25 +46,28 @@ type Item struct {
 }
 
 // New returns a new robinhood hashmap.
-func New(size int) *Map {
-	return &Map{Items: make([]Item, size)}
+func New(capacity int) *Map {
+	if capacity == 0 {
+		capacity = defaultCapacity
+	}
+	return &Map{items: make([]Item, capacity)}
 }
 
 // Reset clears Map, where already allocated memory will be reused.
 func (m *Map) Reset() {
-	for i := range m.Items {
-		m.Items[i] = Item{}
+	for i := range m.items {
+		m.items[i] = Item{}
 	}
 
-	m.Count = 0
+	m.count = 0
 }
 
 func (m *Map) Get(key string) (val interface{}, err error) {
-	size := int64(len(m.Items))
+	size := int64(len(m.items))
 	indexes := hashChain(size, key)
 	for _, index := range indexes {
 		if m.probeGet(key, index) {
-			return m.Items[index].Val, nil
+			return m.items[index].Val, nil
 		}
 	}
 
@@ -71,13 +76,13 @@ func (m *Map) Get(key string) (val interface{}, err error) {
 }
 
 func (m *Map) SyncGet(key string) (val interface{}, err error) {
-	size := int64(len(m.Items))
+	size := int64(len(m.items))
 	indexes := hashChain(size, key)
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	for _, index := range indexes {
 		if m.probeGet(key, index) {
-			return m.Items[index].Val, nil
+			return m.items[index].Val, nil
 		}
 	}
 
@@ -86,7 +91,7 @@ func (m *Map) SyncGet(key string) (val interface{}, err error) {
 }
 
 func (m *Map) Set(key string, val interface{}) error {
-	size := int64(len(m.Items))
+	size := int64(len(m.items))
 	indexes := hashChain(size, key)
 	for _, index := range indexes {
 		if m.probeEmplace(key, val, index) {
@@ -98,7 +103,7 @@ func (m *Map) Set(key string, val interface{}) error {
 }
 
 func (m *Map) SyncSet(key string, val interface{}) error {
-	size := int64(len(m.Items))
+	size := int64(len(m.items))
 	indexes := hashChain(size, key)
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -112,53 +117,53 @@ func (m *Map) SyncSet(key string, val interface{}) error {
 }
 
 func (m *Map) Del(key string) {
-	size := int64(len(m.Items))
+	size := int64(len(m.items))
 	indexes := hashChain(size, key)
 	for _, index := range indexes {
 		if m.probeDel(key, index) {
-			m.Count--
+			m.count--
 			return
 		}
 	}
 
 	idx, _, err := m.linearProbingGet(key, indexes[0])
 	if !errors.Is(err, ErrNotFound) {
-		m.Count--
-		m.Items[idx].Key = "" // mark as deleted.
+		m.count--
+		m.items[idx].Key = "" // mark as deleted.
 	}
 }
 
 func (m *Map) SyncDel(key string) {
-	size := int64(len(m.Items))
+	size := int64(len(m.items))
 	indexes := hashChain(size, key)
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	for _, index := range indexes {
 		if m.probeDel(key, index) {
-			m.Count--
+			m.count--
 			return
 		}
 	}
 
 	idx, _, err := m.linearProbingGet(key, indexes[0])
 	if !errors.Is(err, ErrNotFound) {
-		m.Count--
-		m.Items[idx].Key = "" // mark as deleted.
+		m.count--
+		m.items[idx].Key = "" // mark as deleted.
 	}
 }
 
 func (m *Map) probeGet(key string, index int64) bool {
-	item := &m.Items[index]
+	item := &m.items[index]
 	return key == item.Key
 }
 
 // Get retrieves the val for a given key.
 func (m *Map) linearProbingGet(key string, hint int64) (idx int64, val interface{}, err error) {
-	num := int64(len(m.Items))
+	num := int64(len(m.items))
 	idxStart := hint
 
 	for {
-		e := &m.Items[hint]
+		e := &m.items[hint]
 		if e.Key == "" {
 			return 0, nil, ErrNotFound
 		}
@@ -179,10 +184,10 @@ func (m *Map) linearProbingGet(key string, hint int64) (idx int64, val interface
 }
 
 func (m *Map) probeEmplace(key string, val interface{}, index int64) bool {
-	item := &m.Items[index]
+	item := &m.items[index]
 	switch item.Key {
 	case "":
-		m.Count++
+		m.count++
 		fallthrough
 	case key:
 		item.Key = key
@@ -196,16 +201,16 @@ func (m *Map) probeEmplace(key string, val interface{}, index int64) bool {
 
 // linearProbeEmplace inserts or updates a key/val into the Map.
 func (m *Map) linearProbeEmplace(key string, val interface{}, idx int64) error {
-	num := int64(len(m.Items))
+	num := int64(len(m.items))
 	idxStart := idx
 
 	incoming := Item{key, val, 0}
 
 	for {
-		e := &m.Items[idx]
+		e := &m.items[idx]
 		if e.Key == "" {
-			m.Items[idx] = incoming
-			m.Count++
+			m.items[idx] = incoming
+			m.count++
 			return nil
 		}
 
@@ -219,7 +224,7 @@ func (m *Map) linearProbeEmplace(key string, val interface{}, idx int64) error {
 
 		// Swap if the incoming item is further from its best idx.
 		if e.Distance < incoming.Distance {
-			incoming, m.Items[idx] = m.Items[idx], incoming
+			incoming, m.items[idx] = m.items[idx], incoming
 		}
 
 		incoming.Distance++ // One step further away from best idx.
@@ -229,8 +234,8 @@ func (m *Map) linearProbeEmplace(key string, val interface{}, idx int64) error {
 			idx = 0
 		}
 
-		if incoming.Distance > m.MaxDistance || idx == idxStart {
-			m.Grow(m.Count * 2)
+		if incoming.Distance > m.maxDistance || idx == idxStart {
+			m.Grow(m.count * 2)
 
 			return m.Set(incoming.Key, incoming.Val)
 		}
@@ -238,7 +243,7 @@ func (m *Map) linearProbeEmplace(key string, val interface{}, idx int64) error {
 }
 
 func (m *Map) probeDel(key string, hint int64) bool {
-	item := &m.Items[hint]
+	item := &m.items[hint]
 	if item.Key == key {
 		item.Key = "" // mark as deleted.
 		return true
@@ -254,8 +259,8 @@ func (m *Map) CopyTo(dest *Map) {
 // Visit invokes the callback on key/val. The callback can return
 // false to exit the visitation early.
 func (m *Map) Visit(callback func(k string, v interface{}) (keepGoing bool)) {
-	for i := range m.Items {
-		e := &m.Items[i]
+	for i := range m.items {
+		e := &m.items[i]
 		if e.Key != "" {
 			if !callback(e.Key, e.Val) {
 				return
@@ -269,6 +274,6 @@ func (m *Map) Grow(newSize int) {
 	grow := New(newSize)
 	m.CopyTo(grow)
 	m.Reset()
-	m.Items = grow.Items
-	m.Count = grow.Count
+	m.items = grow.items
+	m.count = grow.count
 }
