@@ -2,22 +2,8 @@
 
 Synx is enhanced version of standard `sync` package.
 
-## Spinlock
+## License
 
-TODO
+Synx is primarily distributed under the terms of both the MIT license and Apache License (Version 2.0).
 
-## Once
-
-```sh
-$ go version
-go version go1.17.1 linux/amd64
-$ go test -race -bench=. ./...
-goos: linux
-goarch: amd64
-pkg: github.com/moeryomenko/synx
-cpu: AMD Ryzen 5 3500U with Radeon Vega Mobile Gfx
-BenchmarkOnce-8         	19812547	       61.74 ns/op
-BenchmarkCustomOnce-8   	23804229	       50.94 ns/op
-PASS
-ok  	github.com/moeryomenko/synx	2.571s
-```
+See [LICENSE-APACHE](LICENSE-APACHE) and/or [LICENSE-MIT](LICENSE-MIT) for details.
