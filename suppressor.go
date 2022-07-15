@@ -1,6 +1,9 @@
 package synx
 
-import "time"
+import (
+	"sync"
+	"time"
+)
 
 // call is an in-flight or completed suppressor.Do call
 type call struct {
@@ -18,13 +21,14 @@ type call struct {
 	// mutex held before the WaitGroup is done, and are read but
 	// not written after the WaitGroup is done.
 	chans []chan<- Result
+	mu    sync.Mutex
 }
 
 // Suppressor represents a class of work and forms a namespace in
 // which units of work can be executed with duplicate suppression.
 type Suppressor struct {
 	m  map[string]*call
-	mu Spinlock
+	mu sync.Mutex
 }
 
 func NewSuppressor() *Suppressor {
@@ -51,7 +55,9 @@ type Result struct {
 func (g *Suppressor) Do(key string, expiration time.Duration, fn func() (interface{}, error)) <-chan Result {
 	ch := make(chan Result, 1)
 	if c := g.get(key); c != nil {
+		c.mu.Lock()
 		c.chans = append(c.chans, ch)
+		c.mu.Unlock()
 		return ch
 	}
 	c := &call{
@@ -69,14 +75,15 @@ func (g *Suppressor) Do(key string, expiration time.Duration, fn func() (interfa
 
 // doCall handles the single call for a key.
 func (g *Suppressor) doCall(c *call, key string, fn func() (interface{}, error)) {
-	defer func() {
-		c.wg.Done()
-		for _, ch := range c.chans {
-			ch <- Result{c.val, c.err}
-		}
-	}()
+	defer c.wg.Done()
 
 	c.val, c.err = fn()
+	c.mu.Lock()
+	for _, ch := range c.chans {
+		ch <- Result{c.val, c.err}
+	}
+	c.chans = c.chans[:0]
+	c.mu.Unlock()
 }
 
 func (g *Suppressor) get(key string) *call {

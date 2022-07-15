@@ -1,6 +1,7 @@
 package synx
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -82,6 +83,35 @@ func TestDoDupSuppress(t *testing.T) {
 	wg2.Wait()
 	if got := atomic.LoadInt32(&calls); got <= 0 || got >= n {
 		t.Errorf("number of calls = %d; want over 0 and less than %d", got, n)
+	}
+}
+
+func TestDoDeduplicate(t *testing.T) {
+	g := NewSuppressor()
+	var calls int32
+	fn := func() (interface{}, error) {
+		atomic.AddInt32(&calls, 1)
+
+		return nil, nil
+	}
+
+	ticker := time.NewTicker(2 * time.Millisecond)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+
+loop:
+	for {
+		select {
+		case <-ticker.C:
+			g.Do(`test`, time.Second, fn)
+		case <-ctx.Done():
+			break loop
+		}
+	}
+
+	if calls != 1 {
+		t.Errorf("unexpected calls count: %d", calls)
 	}
 }
 
