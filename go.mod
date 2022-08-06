@@ -2,4 +2,6 @@ module github.com/moeryomenko/synx
 
 go 1.18
 
-require golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f
+require github.com/hashicorp/go-multierror v1.1.1
+
+require github.com/hashicorp/errwrap v1.1.0 // indirect

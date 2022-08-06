@@ -49,7 +49,7 @@ func (g *ErrGroup) Go(f func(ctx context.Context) error) {
 	go func() {
 		defer g.wg.Done()
 
-		if err := f(g.ctx); err != nil {
+		if err := Graceful(g.ctx, f); err != nil {
 			g.errOnce.Do(func() {
 				g.err = err
 				g.cancel()

@@ -33,3 +33,14 @@ func TestErrGroup(t *testing.T) {
 		}
 	}
 }
+
+func TestErrGroup_panic(t *testing.T) {
+	g := NewErrGroup(context.Background())
+	g.Go(func(_ context.Context) error {
+		panic(`test panic`)
+	})
+	err := g.Wait()
+	if err == nil {
+		t.FailNow()
+	}
+}
