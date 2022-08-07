@@ -18,7 +18,9 @@ func NewWaitGroup() *WaitGroup {
 // Add has same behaviour as sync.WaitGroup.
 func (wg *WaitGroup) Add(delta int) {
 	if n := atomic.AddInt64(&wg.n, int64(delta)); n == 0 {
-		close(wg.doneCh)
+		if !isChanClosed(wg.doneCh) {
+			close(wg.doneCh)
+		}
 	}
 }
 

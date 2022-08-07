@@ -12,7 +12,7 @@ type ErrGroup struct {
 
 	wg *WaitGroup
 
-	errOnce *Once
+	errOnce Once
 	err     error
 }
 
@@ -24,10 +24,9 @@ type ErrGroup struct {
 func NewErrGroup(ctx context.Context) *ErrGroup {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ErrGroup{
-		wg:      NewWaitGroup(),
-		ctx:     ctx,
-		cancel:  cancel,
-		errOnce: new(Once),
+		wg:     NewWaitGroup(),
+		ctx:    ctx,
+		cancel: cancel,
 	}
 }
 
