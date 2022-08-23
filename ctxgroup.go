@@ -9,8 +9,7 @@ import (
 // A CtxGroup is a collection of goroutines working on subtasks that are part of
 // the same overall task.
 type CtxGroup struct {
-	ctx    context.Context
-	cancel context.CancelFunc
+	ctx context.Context
 
 	wg *WaitGroup
 
@@ -20,11 +19,9 @@ type CtxGroup struct {
 
 // NewCtxGroup returns a new CtxGroup with an derived Context from ctx.
 func NewCtxGroup(ctx context.Context) *CtxGroup {
-	ctx, cancel := context.WithCancel(ctx)
 	return &CtxGroup{
-		wg:     NewWaitGroup(),
-		ctx:    ctx,
-		cancel: cancel,
+		wg:  NewWaitGroup(),
+		ctx: ctx,
 	}
 }
 
