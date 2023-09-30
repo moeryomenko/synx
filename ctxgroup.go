@@ -2,8 +2,7 @@ package synx
 
 import (
 	"context"
-
-	"github.com/hashicorp/go-multierror"
+	"errors"
 )
 
 // A CtxGroup is a collection of goroutines working on subtasks that are part of
@@ -44,7 +43,7 @@ func (g *CtxGroup) Go(f func(ctx context.Context) error) {
 
 		if err := Graceful(g.ctx, f); err != nil {
 			g.lock.Lock()
-			g.err = multierror.Append(g.err, err)
+                        err = errors.Join(err)
 			g.lock.Unlock()
 		}
 	}()
