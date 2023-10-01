@@ -4,7 +4,7 @@ import "sync/atomic"
 
 // WaitGroup is like sync.WaitGroup with a signal channel.
 type WaitGroup struct {
-	n      int64
+	n      atomic.Int64
 	doneCh chan struct{}
 }
 
@@ -17,7 +17,7 @@ func NewWaitGroup() *WaitGroup {
 
 // Add has same behaviour as sync.WaitGroup.
 func (wg *WaitGroup) Add(delta int) {
-	if n := atomic.AddInt64(&wg.n, int64(delta)); n == 0 {
+	if wg.n.Add(int64(delta)) == 0 {
 		close(wg.doneCh)
 	}
 }
@@ -29,5 +29,8 @@ func (wg *WaitGroup) Done() {
 
 // Wait returns a channel that will be closed on completion.
 func (wg *WaitGroup) Wait() <-chan struct{} {
+	if wg.n.Load() == 0 {
+		close(wg.doneCh)
+	}
 	return wg.doneCh
 }
