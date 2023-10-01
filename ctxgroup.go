@@ -43,7 +43,7 @@ func (g *CtxGroup) Go(f func(ctx context.Context) error) {
 
 		if err := Graceful(g.ctx, f); err != nil {
 			g.lock.Lock()
-                        err = errors.Join(err)
+			g.err = errors.Join(g.err, err)
 			g.lock.Unlock()
 		}
 	}()
