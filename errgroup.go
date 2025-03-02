@@ -1,6 +1,9 @@
 package synx
 
-import "context"
+import (
+	"context"
+	"sync"
+)
 
 // A ErrGroup is a collection of goroutines working on subtasks that are part of
 // the same overall task.
@@ -10,9 +13,9 @@ type ErrGroup struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	wg *WaitGroup
+	wg *sync.WaitGroup
 
-	errOnce *Once
+	errOnce *sync.Once
 	err     error
 }
 
@@ -24,17 +27,17 @@ type ErrGroup struct {
 func NewErrGroup(ctx context.Context) *ErrGroup {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ErrGroup{
-		wg:      NewWaitGroup(),
+		wg:      &sync.WaitGroup{},
 		ctx:     ctx,
 		cancel:  cancel,
-		errOnce: new(Once),
+		errOnce: new(sync.Once),
 	}
 }
 
 // Wait blocks until all function calls from the Go method have returned, then
 // returns the first non-nil error (if any) from them.
 func (g *ErrGroup) Wait() error {
-	<-g.wg.Wait()
+	g.wg.Wait()
 	g.cancel()
 	return g.err
 }

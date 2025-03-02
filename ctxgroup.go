@@ -3,6 +3,7 @@ package synx
 import (
 	"context"
 	"errors"
+	"sync"
 )
 
 // A CtxGroup is a collection of goroutines working on subtasks that are part of
@@ -10,28 +11,25 @@ import (
 type CtxGroup struct {
 	ctx context.Context
 
-	wg *WaitGroup
+	wg *sync.WaitGroup
 
-	lock Spinlock
+	lock sync.Mutex
 	err  error
 }
 
 // NewCtxGroup returns a new CtxGroup with an derived Context from ctx.
 func NewCtxGroup(ctx context.Context) *CtxGroup {
 	return &CtxGroup{
-		wg:  NewWaitGroup(),
+		wg:  &sync.WaitGroup{},
 		ctx: ctx,
 	}
 }
 
 // Wait blocks until all function calls from the Go method have returned.
 func (g *CtxGroup) Wait() error {
-	select {
-	case <-g.ctx.Done():
-		return g.ctx.Err()
-	case <-g.wg.Wait():
-		return g.err
-	}
+	g.wg.Wait()
+
+	return g.err
 }
 
 // Go calls the given function in a new goroutine.
